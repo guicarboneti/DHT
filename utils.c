@@ -17,7 +17,7 @@ void executa_entrada(Ring *ring) {
         else if (op == 'L')
             lookup(ring, node, key, timestamp);
         else if (op == 'I')
-            inclusao(ring, key);
+            inclusao(ring, node, key);
         else
             printf("ERRO: Operação desconhecida: %c\n", op);
 }

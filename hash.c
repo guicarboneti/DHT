@@ -87,6 +87,7 @@ int entrada(Ring *ring, int node) {     // entra um nó no anel
 
 	// Insere o novo nó
 	ring->nodes[i].N = node;
+	transferKeys(ring, node);
 	updateFingerTable(ring);
 
 	return 1;
@@ -112,7 +113,7 @@ int saida (Ring *ring, int node) {      // exclui um nó do anel
 	}
 	ring->size--;
 
-	// transferKeys(Ring *ring, node);
+	transferKeys(ring, node);
 	updateFingerTable(ring);
 
 	return 1;
@@ -122,20 +123,24 @@ int lookup (Ring *ring, int node, int key, int timestamp) {     // procura uma c
 	return 1;
 }
 
-int inclusao (Ring *ring, int key) {   // inclui uma chave no anel
+int inclusao (Ring *ring, int node, int key) {   // inclui uma chave no anel
 	int i;
 
-	for (i=0; i<ring->size; i++) {
+	for (i=0; i<ring->size; i++)	// encontra o nó que fará a operação
+		if (ring->nodes[i].N == node)
+			break;
+	for (; i<ring->size; i++) {
 		if (key < ring->nodes[i].N) {
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].key = key;
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].value = key % MAX_SIZE;
 			ring->nodes[i].HT_size++;
 			break;
 		}
-		else if (i == ring->size) {	// chave é maior que o último valor no anel, inserimos no primeiro
+		else if (i == ring->size-1) {	// chave é maior que o último valor no anel, inserimos no primeiro
 			ring->nodes[0].HashTable[ring->nodes[0].HT_size].key = key;
 			ring->nodes[0].HashTable[ring->nodes[0].HT_size].value = key % MAX_SIZE;
 			ring->nodes[0].HT_size++;
+			break;
 		}
 	}
 	return 1;
@@ -158,5 +163,12 @@ void updateFingerTable(Ring *ring) {
 					ring->nodes[i].FingerTable[j].node = ring->nodes[0].N;
 			}
 		}
+	}
+}
+
+void transferKeys(Ring *ring, int node) {
+	int i;	// sepa vamo ter q testar todas as hash table de todos os nós
+	for (i=0; i<ring->size; i++) {
+
 	}
 }

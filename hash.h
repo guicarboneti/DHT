@@ -36,8 +36,10 @@ int saida (Ring *ring, int node);      // exclui um nó do anel
 
 int lookup (Ring *ring, int node, int key, int timestamp);     // procura uma chave no anel
 
-int inclusao (Ring *ring, int key);   // inclui uma chave no anel
+int inclusao (Ring *ring, int node, int key);   // inclui uma chave no anel
 
 void updateFingerTable(Ring *ring);
+
+void transferKeys(Ring *ring, int node);
 
 #endif

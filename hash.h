@@ -34,12 +34,20 @@ int entrada(Ring *ring, int node);     // entra um nó no anel
 
 int saida (Ring *ring, int node);      // exclui um nó do anel
 
-int lookup (Ring *ring, int node, int key, int timestamp);     // procura uma chave no anel
+int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes);     // procura uma chave no anel
 
 int inclusao (Ring *ring, int node, int key);   // inclui uma chave no anel
 
 void updateFingerTable(Ring *ring);
 
 void transferKeys(Ring *ring, int node);
+
+int findNode (Ring *ring, int node);
+
+void printHashTable(Ring* ring, int node);
+
+void printFingerTable(Ring* ring, int node);
+
+int updateKeys(Ring *ring, int node);
 
 #endif

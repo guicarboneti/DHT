@@ -5,6 +5,9 @@
         "optional": "c",
         "string_view": "c",
         "system_error": "c",
-        "string": "c"
+        "string": "c",
+        "array": "c",
+        "initializer_list": "c",
+        "utility": "c"
     }
 }

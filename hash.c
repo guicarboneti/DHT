@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "hash.h"
 
 // Inicializa a finger table com tamanho MAX_SIZE e define todas as posições como vazias
@@ -61,7 +62,8 @@ Ring *inicializaRing(void) {
 	return ring;
 }
 
-int entrada(Ring *ring, int node) {     // entra um nó no anel
+// Entra um nó no anel
+int entrada(Ring *ring, int node) {
 	int i, j;
 
 	// Verifica se o nó já existe no anel
@@ -87,50 +89,72 @@ int entrada(Ring *ring, int node) {     // entra um nó no anel
 
 	// Insere o novo nó
 	ring->nodes[i].N = node;
-	transferKeys(ring, node);
+	updateKeys(ring, node);
 	updateFingerTable(ring);
 
 	return 1;
 }
 
-int saida (Ring *ring, int node) {      // exclui um nó do anel
+// Exclui um nó do anel
+int saida (Ring *ring, int node) {
 	int i, j;
 
-	// Verifica se o nó existe no anel
-	for (i = 0; i < ring->size; i++) {
-		if (ring->nodes[i].N == node) {
-			break;
-    	}
-		if (i==ring->size-1) {
-			printf("Error: Nó não existe no anel.\n");
-			return -1;
-		}
-	}
+	transferKeys(ring, node);
 
+	i = findNode(ring, node);
 	// Desloca os nós para a esquerda
 	for (j=i; j<ring->size; j++) {
 		ring->nodes[j] = ring->nodes[j+1];
 	}
 	ring->size--;
 
-	transferKeys(ring, node);
 	updateFingerTable(ring);
 
 	return 1;
 }
 
-int lookup (Ring *ring, int node, int key, int timestamp) {     // procura uma chave no anel
-	return 1;
+// Procura uma chave no anel
+int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes) {
+	int i, j;
+	
+	i = findNode(ring, node);
+
+	// testa se o nó armazena a chave requisitada
+	for (j=0; j<ring->nodes[i].HT_size; j++)
+		if (ring->nodes[i].HashTable[j].key == key)
+			return ring->nodes[i].N;
+
+	// encontra nó mais próximo ao valor da chave
+	for (j=ring->nodes[i].FT_size-1; j>=0; j--) {
+		if (ring->nodes[i].FingerTable[j].node > key) {
+			// faz requisição ao nó
+			// memcpy(lookup_nodes, &ring->nodes[i].FingerTable[j].node, sizeof(int));
+			return lookup(ring, ring->nodes[i].FingerTable[j].node, key, timestamp, lookup_nodes);
+		}
+		else if (j==0) {
+			// faz requisição ao último nó
+			// memcpy(lookup_nodes, &ring->nodes[i].FingerTable[0].node, sizeof(int));
+			return lookup(ring, ring->nodes[i].FingerTable[0].node, key, timestamp, lookup_nodes);
+		}
+	}
+
+	return 0;
 }
 
-int inclusao (Ring *ring, int node, int key) {   // inclui uma chave no anel
+// Inclui uma chave no anel
+int inclusao (Ring *ring, int node, int key) {
 	int i;
 
-	for (i=0; i<ring->size; i++)	// encontra o nó que fará a operação
-		if (ring->nodes[i].N == node)
-			break;
+	i = findNode(ring, node);
+	
+	// Verificação de limite da hash table
+    if (ring->nodes[i].HT_size >= MAX_SIZE) {
+        printf("Error: Hash table full for node %d\n", node);
+        return -1;
+    }
+	
 	for (; i<ring->size; i++) {
-		if (key < ring->nodes[i].N) {
+		if (key <= ring->nodes[i].N) {
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].key = key;
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].value = key % MAX_SIZE;
 			ring->nodes[i].HT_size++;
@@ -166,9 +190,100 @@ void updateFingerTable(Ring *ring) {
 	}
 }
 
+// transfere as chaves de um nó para o seu sucessor
 void transferKeys(Ring *ring, int node) {
-	int i;	// sepa vamo ter q testar todas as hash table de todos os nós
-	for (i=0; i<ring->size; i++) {
+	int i, j, shift;
 
+	i = findNode(ring, node);
+
+	shift = ring->nodes[i].HT_size;
+	// Desloca as chaves para baixo para abrir espaço para as novas chaves
+	for (j = ring->nodes[i+1].HT_size; j > 0; j--) {
+		ring->nodes[i+1].HashTable[j+shift-1].key = ring->nodes[i+1].HashTable[j - 1].key;
+		ring->nodes[i+1].HashTable[j+shift-1].value = ring->nodes[i+1].HashTable[j - 1].value;
 	}
+	// copia as novas chaves vindas do nó deletado
+	for (j = 0; j<shift; j++) {
+		ring->nodes[i+1].HashTable[j].key = ring->nodes[i].HashTable[j].key;
+		ring->nodes[i+1].HashTable[j].value = ring->nodes[i].HashTable[j].value;
+
+		// limpa hash table do nó deletado
+		ring->nodes[i].HashTable[j].key = 0;
+		ring->nodes[i].HashTable[j].value = 0;
+		ring->nodes[i].HT_size = 0;
+	}
+	ring->nodes[i+1].HT_size+=shift;
+}
+
+// um novo nó entrou no anel, roubar os possíveis valores da Hash Table de seus vizinhos
+int updateKeys(Ring *ring, int node) {
+	int i, j, new_node, sucessor, anterior;
+	new_node = findNode(ring, node);
+	sucessor = new_node+1;
+	anterior = new_node-1;
+
+	// copia chaves do sucessor
+	for (i=0; i<ring->nodes[sucessor].HT_size; i++) {
+		if (node >= ring->nodes[sucessor].HashTable[i].key) {
+			// copia chaves
+			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[sucessor].HashTable[i].key;
+			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[sucessor].HashTable[i].value;
+			ring->nodes[new_node].HT_size++;
+
+			// Desloca as chaves para a esquerda
+			for (j=i; j<ring->nodes[sucessor].HT_size; j++) {
+				ring->nodes[j] = ring->nodes[j+1];
+			}
+			ring->nodes[sucessor].HT_size--;
+		}
+	}
+
+	// copia chaves do anterior
+	for (i=0; i<ring->nodes[anterior].HT_size; i++) {
+		if (node >= ring->nodes[anterior].HashTable[i].key && ring->nodes[anterior].N < ring->nodes[anterior].HashTable[i].key) {
+			// copia chaves
+			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[anterior].HashTable[i].key;
+			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[anterior].HashTable[i].value;
+			ring->nodes[new_node].HT_size++;
+
+			// Desloca as chaves para a esquerda
+			for (j=i; j<ring->nodes[anterior].HT_size; j++) {
+				ring->nodes[j] = ring->nodes[j+1];
+			}
+			ring->nodes[anterior].HT_size--;
+		}
+	}
+	return 1;
+}
+
+// retorna índice do nó no anel
+int findNode (Ring *ring, int node) {
+	int i;
+	for (i=0; i<ring->size; i++) {
+		if (ring->nodes[i].N == node)
+			break;
+		if (i==ring->size-1) {
+			printf("Error: Nó %d não existe no anel.\n", node);
+			return -1;
+		}
+	}
+	return i;
+}
+
+void printHashTable(Ring* ring, int node) {
+	int i = findNode(ring, node);
+	printf("\nHash Table do %d\n", ring->nodes[i].N);
+	for (int j=0; j<ring->nodes[i].HT_size; j++) {
+		printf("    |%d || %d|\n", ring->nodes[i].HashTable[j].key, ring->nodes[i].HashTable[j].value);
+	}
+	printf("\n");
+}
+
+void printFingerTable(Ring* ring, int node) {
+	int i = findNode(ring, node);
+	printf("\nFinger Table do %d\n", ring->nodes[i].N);
+	for (int j=0; j<ring->nodes[i].FT_size; j++) {
+		printf("    |%d || %d|\n", ring->nodes[i].FingerTable[j].index, ring->nodes[i].FingerTable[j].node);
+	}
+	printf("\n");
 }

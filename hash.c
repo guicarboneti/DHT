@@ -155,7 +155,6 @@ int inclusao (Ring *ring, int node, int key) {
 	
 	for (; i<ring->size; i++) {
 		if (key <= ring->nodes[i].N) {
-			printf("foi incluida no nó %d\n", ring->nodes[i].N);
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].key = key;
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].value = key % MAX_SIZE;
 			ring->nodes[i].HT_size++;
@@ -179,14 +178,16 @@ void updateFingerTable(Ring *ring) {
 		ring->nodes[i].FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));
 
 		for (j=0; j<ring->nodes[i].FT_size; j++) {
-			key = ring->nodes[i].N + ring->nodes[i].FingerTable[j].index;	// ex: N8 + 16
+			key = ring->nodes[i].FingerTable[j].index + ring->nodes[i].N;	// ex: N8 + 16
 			for (m=0; m<ring->size; m++) {	// procura nó correspondente
-				if (ring->nodes[m].N > key) {
-					ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
-					break;
+				if (m!=i) {		// se não for o mesmo nó dono da finger table
+					if (ring->nodes[m].N >= key) {
+						ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
+						break;
+					}
+					if (m==ring->size-1)	// não há nenhum nó maior, atribui ao primeiro do anel
+						ring->nodes[i].FingerTable[j].node = ring->nodes[0].N;
 				}
-				if (m==ring->size-1)	// não há nenhum nó maior, atribui ao primeiro do anel
-					ring->nodes[i].FingerTable[j].node = ring->nodes[0].N;
 			}
 		}
 	}
@@ -290,7 +291,7 @@ int findNode (Ring *ring, int node) {
 
 void printHashTable(Ring* ring, int node) {
 	int i = findNode(ring, node);
-	printf("\nHash Table do %d\n", ring->nodes[i].N);
+	printf("\nHash Table do %d\n", node);
 	for (int j=0; j<ring->nodes[i].HT_size; j++) {
 		printf("    |%d || %d|\n", ring->nodes[i].HashTable[j].key, ring->nodes[i].HashTable[j].value);
 	}
@@ -299,7 +300,7 @@ void printHashTable(Ring* ring, int node) {
 
 void printFingerTable(Ring* ring, int node) {
 	int i = findNode(ring, node);
-	printf("\nFinger Table do %d\n", ring->nodes[i].N);
+	printf("\nFinger Table do %d\n", node);
 	for (int j=0; j<ring->nodes[i].FT_size; j++) {
 		printf("    |%d || %d|\n", ring->nodes[i].FingerTable[j].index, ring->nodes[i].FingerTable[j].node);
 	}

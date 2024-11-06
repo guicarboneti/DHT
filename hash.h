@@ -34,7 +34,7 @@ int entrada(Ring *ring, int node);     // entra um nó no anel
 
 int saida (Ring *ring, int node);      // exclui um nó do anel
 
-int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes);     // procura uma chave no anel
+int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int *lookup_count);     // procura uma chave no anel
 
 int inclusao (Ring *ring, int node, int key);   // inclui uma chave no anel
 

@@ -20,17 +20,19 @@ void executa_entrada(Ring *ring) {
         }
         else if (op == 'L') {
             printf("%d lookup %d\n", node, key);
+            for (int i =0; i<ring->size; i++) {
+                printHashTable(ring, ring->nodes[i].N);
+                printFingerTable(ring, ring->nodes[i].N);
+            }
             int *lookup_nodes = (int *) calloc(MAX_SIZE, sizeof(int));
-        	printf("out: %d\n", node);
-            printFingerTable(ring, node);
-            printHashTable(ring, node);
-            int final = lookup(ring, node, key, timestamp, lookup_nodes);
-        	printf("final: %d\n", final);
+            int lookup_count=0;
+            lookup(ring, node, key, timestamp, lookup_nodes, &lookup_count);
             printf("%d L %d {", timestamp, key);
-            for (i=0; ; i++) {
-                if (lookup_nodes[i]==0)
-                    break;
-                printf("%d,", lookup_nodes[i]);
+            for (i=0; i<lookup_count; i++) {
+                if (i==0)
+                    printf("%d", lookup_nodes[i]);
+                else
+                    printf(",%d", lookup_nodes[i]);
             }
             printf("}\n");
         }

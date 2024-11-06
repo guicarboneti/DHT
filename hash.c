@@ -89,6 +89,8 @@ int entrada(Ring *ring, int node) {
 
 	// Insere o novo nó
 	ring->nodes[i].N = node;
+	ring->nodes[i].FT_size = 0;
+	ring->nodes[i].HT_size = 0;
 	updateKeys(ring, node);
 	updateFingerTable(ring);
 
@@ -114,9 +116,11 @@ int saida (Ring *ring, int node) {
 }
 
 // Procura uma chave no anel
-int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes) {
-	int i, j;
-	
+int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int *lookup_count) {
+	int i, j, closest, closest_node, diff;
+
+	lookup_nodes[*lookup_count] = node;
+	(*lookup_count)++;
 	i = findNode(ring, node);
 
 	// testa se o nó armazena a chave requisitada
@@ -124,21 +128,17 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes) {
 		if (ring->nodes[i].HashTable[j].key == key)
 			return ring->nodes[i].N;
 
+	closest = MAX_SIZE;
 	// encontra nó mais próximo ao valor da chave
-	for (j=ring->nodes[i].FT_size-1; j>=0; j--) {
-		if (ring->nodes[i].FingerTable[j].node > key) {
-			// faz requisição ao nó
-			// memcpy(lookup_nodes, &ring->nodes[i].FingerTable[j].node, sizeof(int));
-			return lookup(ring, ring->nodes[i].FingerTable[j].node, key, timestamp, lookup_nodes);
-		}
-		else if (j==0) {
-			// faz requisição ao último nó
-			// memcpy(lookup_nodes, &ring->nodes[i].FingerTable[0].node, sizeof(int));
-			return lookup(ring, ring->nodes[i].FingerTable[0].node, key, timestamp, lookup_nodes);
+	for (j=0; j<ring->nodes[i].FT_size; j++) {
+		diff = abs(ring->nodes[i].FingerTable[j].node - key);
+		if (diff < closest) {
+			closest = diff;
+			closest_node = ring->nodes[i].FingerTable[j].node;
 		}
 	}
-
-	return 0;
+	
+	return lookup(ring, closest_node, key, timestamp, lookup_nodes, lookup_count);
 }
 
 // Inclui uma chave no anel
@@ -155,6 +155,7 @@ int inclusao (Ring *ring, int node, int key) {
 	
 	for (; i<ring->size; i++) {
 		if (key <= ring->nodes[i].N) {
+			printf("foi incluida no nó %d\n", ring->nodes[i].N);
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].key = key;
 			ring->nodes[i].HashTable[ring->nodes[i].HT_size].value = key % MAX_SIZE;
 			ring->nodes[i].HT_size++;
@@ -167,6 +168,7 @@ int inclusao (Ring *ring, int node, int key) {
 			break;
 		}
 	}
+
 	return 1;
 }
 
@@ -192,65 +194,81 @@ void updateFingerTable(Ring *ring) {
 
 // transfere as chaves de um nó para o seu sucessor
 void transferKeys(Ring *ring, int node) {
-	int i, j, shift;
+	int new_node, sucessor, j, shift;
 
-	i = findNode(ring, node);
+	// i = findNode(ring, node);
 
-	shift = ring->nodes[i].HT_size;
+	new_node = findNode(ring, node);
+	sucessor = new_node+1;
+	if (new_node==ring->size-1)
+		sucessor = 0;
+
+	shift = ring->nodes[new_node].HT_size;
 	// Desloca as chaves para baixo para abrir espaço para as novas chaves
-	for (j = ring->nodes[i+1].HT_size; j > 0; j--) {
-		ring->nodes[i+1].HashTable[j+shift-1].key = ring->nodes[i+1].HashTable[j - 1].key;
-		ring->nodes[i+1].HashTable[j+shift-1].value = ring->nodes[i+1].HashTable[j - 1].value;
+	for (j = ring->nodes[sucessor].HT_size; j > 0; j--) {
+		ring->nodes[sucessor].HashTable[j+shift-1].key = ring->nodes[sucessor].HashTable[j - 1].key;
+		ring->nodes[sucessor].HashTable[j+shift-1].value = ring->nodes[sucessor].HashTable[j - 1].value;
 	}
 	// copia as novas chaves vindas do nó deletado
 	for (j = 0; j<shift; j++) {
-		ring->nodes[i+1].HashTable[j].key = ring->nodes[i].HashTable[j].key;
-		ring->nodes[i+1].HashTable[j].value = ring->nodes[i].HashTable[j].value;
+		ring->nodes[sucessor].HashTable[j].key = ring->nodes[new_node].HashTable[j].key;
+		ring->nodes[sucessor].HashTable[j].value = ring->nodes[new_node].HashTable[j].value;
 
 		// limpa hash table do nó deletado
-		ring->nodes[i].HashTable[j].key = 0;
-		ring->nodes[i].HashTable[j].value = 0;
-		ring->nodes[i].HT_size = 0;
+		ring->nodes[new_node].HashTable[j].key = 0;
+		ring->nodes[new_node].HashTable[j].value = 0;
+		ring->nodes[new_node].HT_size = 0;
 	}
-	ring->nodes[i+1].HT_size+=shift;
+	ring->nodes[sucessor].HT_size+=shift;
 }
 
 // um novo nó entrou no anel, roubar os possíveis valores da Hash Table de seus vizinhos
 int updateKeys(Ring *ring, int node) {
 	int i, j, new_node, sucessor, anterior;
 	new_node = findNode(ring, node);
+
 	sucessor = new_node+1;
 	anterior = new_node-1;
-
-	// copia chaves do sucessor
-	for (i=0; i<ring->nodes[sucessor].HT_size; i++) {
-		if (node >= ring->nodes[sucessor].HashTable[i].key) {
-			// copia chaves
-			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[sucessor].HashTable[i].key;
-			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[sucessor].HashTable[i].value;
-			ring->nodes[new_node].HT_size++;
-
-			// Desloca as chaves para a esquerda
-			for (j=i; j<ring->nodes[sucessor].HT_size; j++) {
-				ring->nodes[j] = ring->nodes[j+1];
-			}
-			ring->nodes[sucessor].HT_size--;
-		}
+	if (new_node==0) {
+		anterior = ring->size-1;
+	}
+	if (new_node==ring->size-1) {
+		sucessor = 0;
 	}
 
-	// copia chaves do anterior
-	for (i=0; i<ring->nodes[anterior].HT_size; i++) {
-		if (node >= ring->nodes[anterior].HashTable[i].key && ring->nodes[anterior].N < ring->nodes[anterior].HashTable[i].key) {
-			// copia chaves
-			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[anterior].HashTable[i].key;
-			ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[anterior].HashTable[i].value;
-			ring->nodes[new_node].HT_size++;
+	if (ring->size > 1) {
+		// copia chaves do sucessor
+		for (i=0; i<ring->nodes[sucessor].HT_size; i++) {
+			if (node >= ring->nodes[sucessor].HashTable[i].key || (node > ring->nodes[sucessor].N && ring->nodes[sucessor].N < ring->nodes[sucessor].HashTable[i].key)) {
+				// copia chaves
+				ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[sucessor].HashTable[i].key;
+				ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[sucessor].HashTable[i].value;
+				ring->nodes[new_node].HT_size++;
 
-			// Desloca as chaves para a esquerda
-			for (j=i; j<ring->nodes[anterior].HT_size; j++) {
-				ring->nodes[j] = ring->nodes[j+1];
+				// Desloca as chaves para cima
+				for (j=i; j<ring->nodes[sucessor].HT_size; j++) {
+					ring->nodes[sucessor].HashTable[j].key = ring->nodes[sucessor].HashTable[j+1].key;
+					ring->nodes[sucessor].HashTable[j].value = ring->nodes[sucessor].HashTable[j+1].value;
+				}
+				ring->nodes[sucessor].HT_size--;
 			}
-			ring->nodes[anterior].HT_size--;
+		}
+
+		// copia chaves do anterior
+		for (i=0; i<ring->nodes[anterior].HT_size; i++) {
+			if (ring->nodes[anterior].N < ring->nodes[anterior].HashTable[i].key) {
+				// copia chaves
+				ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[anterior].HashTable[i].key;
+				ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[anterior].HashTable[i].value;
+				ring->nodes[new_node].HT_size++;
+
+				// Desloca as chaves para cima
+				for (j=i; j<ring->nodes[anterior].HT_size; j++) {
+					ring->nodes[anterior].HashTable[j].key = ring->nodes[anterior].HashTable[j+1].key;
+					ring->nodes[anterior].HashTable[j].value = ring->nodes[anterior].HashTable[j+1].value;
+				}
+				ring->nodes[anterior].HT_size--;
+			}
 		}
 	}
 	return 1;

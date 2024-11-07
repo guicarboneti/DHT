@@ -175,18 +175,15 @@ void updateFingerTable(Ring *ring) {
 	int i, j, m;
 	for (i=0; i<ring->size; i++) {
 		int key;
-		ring->nodes[i].FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));
+		ring->nodes[i].FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table
 
 		for (j=0; j<ring->nodes[i].FT_size; j++) {
-			key = ring->nodes[i].FingerTable[j].index + ring->nodes[i].N;	// ex: N8 + 16
-			for (m=0; m<ring->size; m++) {	// procura nó correspondente
-				if (m!=i) {		// se não for o mesmo nó dono da finger table
-					if (ring->nodes[m].N >= key) {
-						ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
-						break;
-					}
-					if (m==ring->size-1)	// não há nenhum nó maior, atribui ao primeiro do anel
-						ring->nodes[i].FingerTable[j].node = ring->nodes[0].N;
+			ring->nodes[i].FingerTable[j].node = 0;
+			key = (ring->nodes[i].N + ring->nodes[i].FingerTable[j].index) % (int)pow(2, ring->nodes[i].FT_size);	// (N+2^(k-1))mod 2^m
+			for (m=i+1; m!=i;m = (m + 1) % ring->size) {	// procura nó correspondente
+				if (ring->nodes[m].N >= key) {
+					ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
+					break;
 				}
 			}
 		}

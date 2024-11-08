@@ -173,6 +173,7 @@ int inclusao (Ring *ring, int node, int key) {
 
 void updateFingerTable(Ring *ring) {
 	int i, j, m;
+	printf("size: %d\n", ring->size);
 	for (i=0; i<ring->size; i++) {
 		int key;
 		ring->nodes[i].FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table
@@ -181,7 +182,12 @@ void updateFingerTable(Ring *ring) {
 			ring->nodes[i].FingerTable[j].node = 0;
 			key = (ring->nodes[i].N + ring->nodes[i].FingerTable[j].index) % (int)pow(2, ring->nodes[i].FT_size);	// (N+2^(k-1))mod 2^m
 			for (m=i+1; m!=i;m = (m + 1) % ring->size) {	// procura nó correspondente
+				if (m>=ring->size)
+					break;
+				printf("busca node %d, i=%d\n", ring->nodes[m].N, m);
+				// printf("%d->FingerTable[%d] procura node %d para chave %d\n", ring->nodes[i].N, j, ring->nodes[m].N, key);
 				if (ring->nodes[m].N >= key) {
+					printf("atribuido\n");
 					ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
 					break;
 				}

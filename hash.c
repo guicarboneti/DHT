@@ -6,7 +6,7 @@
 
 // Inicializa a finger table com tamanho MAX_SIZE e define todas as posições como vazias
 FingerTable *inicializaFingerTable(void) {
-	FingerTable* FT = (FingerTable*) malloc(MAX_SIZE * sizeof(FingerTable));
+	FingerTable* FT = (FingerTable*) malloc(sizeof(FingerTable) * MAX_SIZE);
 	if (FT == NULL) {
     	printf("Error: memory allocation.\n");
     	exit(1);
@@ -40,8 +40,6 @@ Node *inicializaNodes(void) {
     	exit(1);
 	}
 	for (int i = 0; i < MAX_SIZE; i++) {
-		nodes[i].FingerTable = inicializaFingerTable();
-		nodes[i].FT_size = 0;
 		nodes[i].HashTable = inicializaHashTable();
 		nodes[i].HT_size = 0;
 		nodes[i].N = 0;
@@ -89,10 +87,8 @@ int entrada(Ring *ring, int node) {
 
 	// Insere o novo nó
 	ring->nodes[i].N = node;
-	ring->nodes[i].FT_size = 0;
 	ring->nodes[i].HT_size = 0;
 	updateKeys(ring, node);
-	updateFingerTable(ring);
 
 	return 1;
 }
@@ -104,20 +100,19 @@ int saida (Ring *ring, int node) {
 	transferKeys(ring, node);
 
 	i = findNode(ring, node);
-	// Desloca os nós para a esquerda
-	for (j=i; j<ring->size; j++) {
-		ring->nodes[j] = ring->nodes[j+1];
-	}
-	ring->size--;
 
-	updateFingerTable(ring);
+	// Desloca os nós para a esquerda
+	if (i!=ring->size-1)
+		for (j=i; j<ring->size; j++)
+			ring->nodes[j] = ring->nodes[j+1];
+	ring->size--;
 
 	return 1;
 }
 
 // Procura uma chave no anel
 int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int *lookup_count) {
-	int i, j, closest, closest_node, diff;
+	int i, j, closest, closest_node, diff, FT_size;
 
 	lookup_nodes[*lookup_count] = node;
 	(*lookup_count)++;
@@ -127,14 +122,16 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int
 	for (j=0; j<ring->nodes[i].HT_size; j++)
 		if (ring->nodes[i].HashTable[j].key == key)
 			return ring->nodes[i].N;
+	
+	FingerTable* FT = calculaFingerTable(ring, node, &FT_size);
 
 	closest = MAX_SIZE;
 	// encontra nó mais próximo ao valor da chave
-	for (j=0; j<ring->nodes[i].FT_size; j++) {
-		diff = abs(ring->nodes[i].FingerTable[j].node - key);
+	for (j=0; j<FT_size; j++) {
+		diff = abs(FT[j].node - key);
 		if (diff < closest) {
 			closest = diff;
-			closest_node = ring->nodes[i].FingerTable[j].node;
+			closest_node = FT[j].node;
 		}
 	}
 	
@@ -171,36 +168,9 @@ int inclusao (Ring *ring, int node, int key) {
 	return 1;
 }
 
-void updateFingerTable(Ring *ring) {
-	int i, j, m;
-	printf("size: %d\n", ring->size);
-	for (i=0; i<ring->size; i++) {
-		int key;
-		ring->nodes[i].FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table
-
-		for (j=0; j<ring->nodes[i].FT_size; j++) {
-			ring->nodes[i].FingerTable[j].node = 0;
-			key = (ring->nodes[i].N + ring->nodes[i].FingerTable[j].index) % (int)pow(2, ring->nodes[i].FT_size);	// (N+2^(k-1))mod 2^m
-			for (m=i+1; m!=i;m = (m + 1) % ring->size) {	// procura nó correspondente
-				if (m>=ring->size)
-					break;
-				printf("busca node %d, i=%d\n", ring->nodes[m].N, m);
-				// printf("%d->FingerTable[%d] procura node %d para chave %d\n", ring->nodes[i].N, j, ring->nodes[m].N, key);
-				if (ring->nodes[m].N >= key) {
-					printf("atribuido\n");
-					ring->nodes[i].FingerTable[j].node = ring->nodes[m].N;
-					break;
-				}
-			}
-		}
-	}
-}
-
 // transfere as chaves de um nó para o seu sucessor
 void transferKeys(Ring *ring, int node) {
 	int new_node, sucessor, j, shift;
-
-	// i = findNode(ring, node);
 
 	new_node = findNode(ring, node);
 	sucessor = new_node+1;
@@ -302,10 +272,35 @@ void printHashTable(Ring* ring, int node) {
 }
 
 void printFingerTable(Ring* ring, int node) {
-	int i = findNode(ring, node);
+	int i, FT_size;
 	printf("\nFinger Table do %d\n", node);
-	for (int j=0; j<ring->nodes[i].FT_size; j++) {
-		printf("    |%d || %d|\n", ring->nodes[i].FingerTable[j].index, ring->nodes[i].FingerTable[j].node);
+	FingerTable* FT = calculaFingerTable(ring, node, &FT_size);
+	for (i=0; i<FT_size; i++) {
+		printf("    |%d || %d|\n", FT[i].index, FT[i].node);
 	}
 	printf("\n");
+}
+
+FingerTable* calculaFingerTable(Ring *ring, int node, int *FT_size) {
+	int i, j, m;
+	i = findNode(ring, node);
+	FingerTable* FT = inicializaFingerTable();
+
+	int key;
+	*FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table
+
+	for (j=0; j<*FT_size; j++) {
+		key = (ring->nodes[i].N + FT[j].index) % (int)pow(2, *FT_size);	// (N+2^(k-1))mod 2^m
+		for (m=0; m<ring->size; m++) {	// procura nó correspondente
+			if (ring->nodes[m].N >= key) {
+				FT[j].node = ring->nodes[m].N;
+				break;
+			}
+			else if (m==ring->size-1) {
+				FT[j].node = ring->nodes[0].N;
+				break;
+			}
+		}
+	}
+	return FT;
 }

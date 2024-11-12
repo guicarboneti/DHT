@@ -14,9 +14,9 @@ typedef struct HashTable {
 
 typedef struct Node {
     int N;
-    FingerTable *FingerTable;
+    // FingerTable *FingerTable;
     HashTable *HashTable;
-    int FT_size;
+    // int FT_size;
     int HT_size;
 } Node;
 
@@ -49,5 +49,7 @@ void printHashTable(Ring* ring, int node);
 void printFingerTable(Ring* ring, int node);
 
 int updateKeys(Ring *ring, int node);
+
+FingerTable* calculaFingerTable(Ring *ring, int node, int *FT_size);
 
 #endif

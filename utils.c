@@ -11,20 +11,22 @@ void executa_entrada(Ring *ring) {
 
     while (scanf("%d %c %d %d", &timestamp, &op, &node, &key) != EOF)
         if (op == 'E') {
-            // printf("entra nó %d\n", node);
+            printf("entra nó %d\n", node);
             entrada(ring, node);
         }
         else if (op == 'S') {
-            // printf("sai nó %d\n", node);
+            printf("sai nó %d\n", node);
             saida(ring, node);
         }
         else if (op == 'L') {
+            printf("%d lookup %d\n", node, key);
             int *lookup_nodes = (int *) calloc(MAX_SIZE, sizeof(int));
             int lookup_count=0;
             lookup(ring, node, key, timestamp, lookup_nodes, &lookup_count);
             imprime_saida(ring, timestamp, key, lookup_nodes, lookup_count);
         }
         else if (op == 'I') {
+            printf("%d inclui %d\n", node, key);
             inclusao(ring, node, key);
         }
         else
@@ -50,6 +52,7 @@ void imprime_saida(Ring *ring, int timestamp, int key, int *lookup_nodes, int lo
             else
                 printf(",%d", FT[j].node);
         printf("}\n");
+        free(FT);
     }
 
 }

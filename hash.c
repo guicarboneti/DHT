@@ -67,7 +67,7 @@ int entrada(Ring *ring, int node) {
 	// Verifica se o nó já existe no anel
 	for (i = 0; i < ring->size; i++) {
 		if (ring->nodes[i].N == node) {
-			printf("Error: Nó já existe no anel.\n");
+			// printf("Error: Nó já existe no anel.\n");
 			return -1;
     	}
 	}
@@ -99,7 +99,8 @@ int saida (Ring *ring, int node) {
 
 	transferKeys(ring, node);
 
-	i = findNode(ring, node);
+	if ((i = findNode(ring, node)) < 0)
+		return -1;
 
 	// Desloca os nós para a esquerda
 	if (i!=ring->size-1)
@@ -135,6 +136,7 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int
 		}
 	}
 	
+	free(FT);
 	return lookup(ring, closest_node, key, timestamp, lookup_nodes, lookup_count);
 }
 
@@ -146,7 +148,7 @@ int inclusao (Ring *ring, int node, int key) {
 	
 	// Verificação de limite da hash table
     if (ring->nodes[i].HT_size >= MAX_SIZE) {
-        printf("Error: Hash table full for node %d\n", node);
+        // printf("Error: Hash table full for node %d\n", node);
         return -1;
     }
 	
@@ -255,7 +257,7 @@ int findNode (Ring *ring, int node) {
 		if (ring->nodes[i].N == node)
 			break;
 		if (i==ring->size-1) {
-			printf("Error: Nó %d não existe no anel.\n", node);
+			// printf("Error: Nó %d não existe no anel.\n", node);
 			return -1;
 		}
 	}
@@ -279,6 +281,7 @@ void printFingerTable(Ring* ring, int node) {
 		printf("    |%d || %d|\n", FT[i].index, FT[i].node);
 	}
 	printf("\n");
+	free(FT);
 }
 
 FingerTable* calculaFingerTable(Ring *ring, int node, int *FT_size) {

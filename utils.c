@@ -61,11 +61,11 @@ void executa_entrada(Ring *ring) {
             // }
         }
         else if (op == 'L') {
-            // printf("%d lookup %d\n", node, key);
-            // for (int i=0; i<ring->size; i++) {
-            //     printFingerTable(ring, ring->nodes[i].N);
-            //     printHashTable(ring, ring->nodes[i].N);
-            // }
+            printf("%d lookup %d\n", node, key);
+            for (int i=0; i<ring->size; i++) {
+                printFingerTable(ring, ring->nodes[i].N);
+                printHashTable(ring, ring->nodes[i].N);
+            }
             int *lookup_nodes = (int *) calloc(MAX_SIZE, sizeof(int));
             int lookup_count=0;
             lookup(ring, node, key, timestamp, lookup_nodes, &lookup_count);

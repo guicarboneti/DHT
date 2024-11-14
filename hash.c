@@ -125,7 +125,17 @@ int saida (Ring *ring, int node) {
 
 // Procura uma chave no anel
 int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int *lookup_count) {
-	int i, j, closest, closest_node, diff, FT_size;
+	int i, j, closest, closest_node, diff, FT_size, biggest;
+
+	printf("entrei: %d\n", node);
+
+	// Detecção de ciclo
+    for (j = 0; j < *lookup_count; j++) {
+        if (lookup_nodes[j] == node) {
+            printf("Ciclo detectado em %d. Abortando lookup.\n", node);
+            return -1; // Indica erro de ciclo
+        }
+    }
 
 	lookup_nodes[*lookup_count] = node;
 	(*lookup_count)++;
@@ -143,6 +153,8 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int
 		return lookup(ring, FT[0].node, key, timestamp, lookup_nodes, lookup_count);
 
 	closest = MAX_SIZE;
+	closest_node = -1;
+	biggest = -1;
 	// encontra nó mais próximo ao valor da chave
 	for (j=0; j<FT_size; j++) {
 		diff = abs(FT[j].node - key);
@@ -150,10 +162,15 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int
 			closest = diff;
 			closest_node = FT[j].node;
 		}
+		if (FT[j].node > biggest)
+			biggest = FT[j].node;
 	}
-	
+
+
+	if (closest_node == -1)	// detecção de ciclo (se não há nó menor que a chave na finger table, direciona para o maior nó)
+		return lookup(ring, biggest, key, timestamp, lookup_nodes, lookup_count);
+
 	free(FT);
-	// printf("%d procura no %d\n", node, closest_node);
 	return lookup(ring, closest_node, key, timestamp, lookup_nodes, lookup_count);
 }
 

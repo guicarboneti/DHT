@@ -127,8 +127,6 @@ int saida (Ring *ring, int node) {
 int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int *lookup_count) {
 	int i, j, closest, closest_node, diff, FT_size, biggest;
 
-	printf("entrei: %d\n", node);
-
 	// Detecção de ciclo
     for (j = 0; j < *lookup_count; j++) {
         if (lookup_nodes[j] == node) {
@@ -176,6 +174,7 @@ int lookup (Ring *ring, int node, int key, int timestamp, int *lookup_nodes, int
 
 // Inclui uma chave no anel
 int inclusao (Ring *ring, int node, int key) {
+
 	int i;
 
 	i = findNode(ring, node);
@@ -234,17 +233,12 @@ void transferKeys(Ring *ring, int node) {
 
 // um novo nó entrou no anel, roubar os possíveis valores da Hash Table de seus vizinhos
 int updateKeys(Ring *ring, int node) {
-	int i, j, new_node, sucessor, anterior;
+	int i, j, new_node, sucessor;
 	new_node = findNode(ring, node);
 
 	sucessor = new_node+1;
-	anterior = new_node-1;
-	if (new_node==0) {
-		anterior = ring->size-1;
-	}
-	if (new_node==ring->size-1) {
+	if (new_node==ring->size-1)
 		sucessor = 0;
-	}
 
 	if (ring->size > 1) {
 		// copia chaves do sucessor
@@ -278,23 +272,6 @@ int updateKeys(Ring *ring, int node) {
 				i=-1;
 			}
 		}
-
-		// // copia chaves do anterior
-		// for (i=0; i<ring->nodes[anterior].HT_size; i++) {
-		// 	if (ring->nodes[anterior].N < ring->nodes[anterior].HashTable[i].key) {
-		// 		// copia chaves
-		// 		ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].key = ring->nodes[anterior].HashTable[i].key;
-		// 		ring->nodes[new_node].HashTable[ring->nodes[new_node].HT_size].value = ring->nodes[anterior].HashTable[i].value;
-		// 		ring->nodes[new_node].HT_size++;
-
-		// 		// Desloca as chaves para cima
-		// 		for (j=i; j<ring->nodes[anterior].HT_size; j++) {
-		// 			ring->nodes[anterior].HashTable[j].key = ring->nodes[anterior].HashTable[j+1].key;
-		// 			ring->nodes[anterior].HashTable[j].value = ring->nodes[anterior].HashTable[j+1].value;
-		// 		}
-		// 		ring->nodes[anterior].HT_size--;
-		// 	}
-		// }
 	}
 	return 1;
 }
@@ -339,7 +316,7 @@ FingerTable* calculaFingerTable(Ring *ring, int node, int *FT_size) {
 	FingerTable* FT = inicializaFingerTable();
 
 	int key;
-	*FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table
+	*FT_size = (int)ceil(log2(ring->nodes[ring->size-1].N + 1));	// tamanho da finger table (log2 do maior identificador)
 
 	for (j=0; j<*FT_size; j++) {
 		key = (ring->nodes[i].N + FT[j].index) % (int)pow(2, *FT_size);	// (N+2^(k-1))mod 2^m

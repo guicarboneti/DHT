@@ -5,79 +5,25 @@
 #include "utils.h"
 
 // le arquivo de entrada e executa as operações
-// void executa_entrada(Ring *ring) {
-//     char op, line[MAX_SIZE];
-//     int timestamp, node, key;
-
-//     while (fgets(line, sizeof(line), stdin)) {
-//         sscanf(line, "%d %c %d %d", &timestamp, &op, &node, &key);
-
-//         if (op == 'E') {
-//             printf("entra nó %d\n", node);
-//             entrada(ring, node);
-//         } 
-//         else if (op == 'S') {
-//             printf("sai nó %d\n", node);
-//             saida(ring, node);
-//         } 
-//         else if (op == 'L') {
-//             printf("%d lookup %d\n", node, key);
-//             // for (int i=0; i<ring->size; i++) {
-//             //     printFingerTable(ring, ring->nodes[i].N);
-//             //     printHashTable(ring, ring->nodes[i].N);
-//             // }
-//             // int *lookup_nodes = (int *) calloc(MAX_SIZE, sizeof(int));
-//             // int lookup_count = 0;
-//             // lookup(ring, node, key, timestamp, lookup_nodes, &lookup_count);
-//             // imprime_saida(ring, timestamp, key, lookup_nodes, lookup_count);
-//             // free(lookup_nodes);
-//         } 
-//         else if (op == 'I') {
-//             printf("%d inclui %d\n", node, key);
-//             inclusao(ring, node, key);
-//         }
-//     }
-// }
-
 void executa_entrada(Ring *ring) {
     char op;
     int timestamp, node, key;
 
     while (scanf("%d %c %d %d", &timestamp, &op, &node, &key) != EOF)
         if (op == 'E') {
-            // printf("entra nó %d\n", node);
-            // for (int i=0; i<ring->size; i++) {
-            //     printFingerTable(ring, ring->nodes[i].N);
-            //     printHashTable(ring, ring->nodes[i].N);
-            // }
             entrada(ring, node);
         }
         else if (op == 'S') {
-            // printf("sai nó %d\n", node);
             saida(ring, node);
-            // for (int i=0; i<ring->size; i++) {
-            //     printFingerTable(ring, ring->nodes[i].N);
-            //     printHashTable(ring, ring->nodes[i].N);
-            // }
         }
         else if (op == 'L') {
-            printf("%d lookup %d\n", node, key);
-            for (int i=0; i<ring->size; i++) {
-                printFingerTable(ring, ring->nodes[i].N);
-                printHashTable(ring, ring->nodes[i].N);
-            }
             int *lookup_nodes = (int *) calloc(MAX_SIZE, sizeof(int));
             int lookup_count=0;
             lookup(ring, node, key, timestamp, lookup_nodes, &lookup_count);
             imprime_saida(ring, timestamp, key, lookup_nodes, lookup_count);
         }
         else if (op == 'I') {
-            // printf("%d inclui %d\n", node, key);
             inclusao(ring, node, key);
-            // for (int i=0; i<ring->size; i++) {
-            //     printFingerTable(ring, ring->nodes[i].N);
-            //     printHashTable(ring, ring->nodes[i].N);
-            // }
         }
         else
             printf("ERRO: Operação desconhecida: %c\n", op);
